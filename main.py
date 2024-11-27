@@ -6,6 +6,8 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import json
+import xml.etree.ElementTree as ET
 
 
 class FinanceTrackerApp:
@@ -41,8 +43,8 @@ class FinanceTrackerApp:
             conn = mysql.connector.connect(
                 host='localhost',
                 database='finance_tracker',
-                user='root',  # Update with your MySQL username
-                password='Fada#511f#@'  # Update with your MySQL password
+                user='root',
+                password='Fada#511f#@'
             )
             if conn.is_connected():
                 print("Connected to the database")
@@ -204,7 +206,7 @@ class FinanceTrackerApp:
         self.clear_content()
         ttk.Label(self.content, text="Generating Report...", font=("Helvetica", 18)).pack(pady=20)
 
-        # Fetch data for report
+        # Fetch data for the report
         total_income = self.fetch_total("income")
         total_expenses = self.fetch_total("expense")
         balance = total_income - total_expenses
@@ -227,7 +229,7 @@ class FinanceTrackerApp:
         chart_path = "analytics_chart.png"
         figure.savefig(chart_path)
 
-        # Create PDF report
+        # Generate PDF Report
         report_file = "finance_report.pdf"
         c = canvas.Canvas(report_file, pagesize=letter)
         c.setFont("Helvetica", 12)
@@ -247,8 +249,33 @@ class FinanceTrackerApp:
         # Save PDF
         c.save()
 
-        messagebox.showinfo("Success", f"Report generated and saved as {report_file}!")
+        # Generate JSON Report
+        report_data = {
+            "total_income": float(total_income),
+            "total_expenses": float(total_expenses),
+            "balance": float(balance),
+            "chart_included": total_income > 0 or total_expenses > 0
+        }
 
+        json_file = "finance_report.json"
+        with open(json_file, "w") as json_out:
+            json.dump(report_data, json_out, indent=4)
+
+        # Generate XML Report
+        root = ET.Element("FinanceReport")
+        ET.SubElement(root, "TotalIncome").text = f"{total_income:.2f}"
+        ET.SubElement(root, "TotalExpenses").text = f"{total_expenses:.2f}"
+        ET.SubElement(root, "Balance").text = f"{balance:.2f}"
+        ET.SubElement(root, "ChartIncluded").text = str(total_income > 0 or total_expenses > 0)
+
+        tree = ET.ElementTree(root)
+        xml_file = "finance_report.xml"
+        tree.write(xml_file)
+
+        messagebox.showinfo(
+            "Success",
+            f"Reports generated and saved:\n- {report_file}\n- {json_file}\n- {xml_file}"
+        )
     def clear_content(self):
         for widget in self.content.winfo_children():
             widget.destroy()
